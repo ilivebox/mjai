@@ -9,11 +9,11 @@ module Mjai
     class ActiveGame < Game
 
         ACTION_PREFERENCES = {
-            :hora => 4,
-            :ryukyoku => 3,
-            :pon => 2,
-            :daiminkan => 2,
-            :chi => 1,
+            :hora => 4,  # 和了
+            :ryukyoku => 3, # 流局
+            :pon => 2, # 碰
+            :daiminkan => 2, # 大明杠
+            :chi => 1, # 吃
         }
 
         def initialize(players)
