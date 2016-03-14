@@ -5,9 +5,9 @@ require "mjai/validation_error"
 
 
 module Mjai
-    
+
     class ActiveGame < Game
-        
+
         ACTION_PREFERENCES = {
             :hora => 4,
             :ryukyoku => 3,
@@ -15,15 +15,18 @@ module Mjai
             :daiminkan => 2,
             :chi => 1,
         }
-        
+
         def initialize(players)
           super(players.shuffle())
           @game_type = :one_kyoku
         end
-        
+
         attr_accessor(:game_type)
-        
+
         def play()
+          # one_kyoku 一莊
+          # tonpu 东风战
+          # tonnan 东南战
           if ![:one_kyoku, :tonpu, :tonnan].include?(@game_type)
             raise("Unknown game_type")
           end
@@ -43,7 +46,7 @@ module Mjai
             return false
           end
         end
-        
+
         def play_kyoku()
           catch(:end_kyoku) do
             @pipais = @all_pais.shuffle()
@@ -70,7 +73,7 @@ module Mjai
           end
           do_action({:type => :end_kyoku})
         end
-        
+
         # 摸打
         def mota()
           reach_pending = false
@@ -140,7 +143,7 @@ module Mjai
             end
           end
         end
-        
+
         def check_ryukyoku()
           if players.all?(){ |pl| pl.reach? }
             process_ryukyoku(:suchareach)
@@ -157,21 +160,21 @@ module Mjai
             throw(:end_kyoku)
           end
         end
-        
+
         def update_state(action)
           super(action)
           if action.type == :tsumo && @pipais.size != self.num_pipais
             raise("num pipais mismatch: %p != %p" % [@pipais.size, self.num_pipais])
           end
         end
-        
+
         def choose_actions(actions)
           actions = actions.select(){ |a| a }
           max_pref = actions.map(){ |a| ACTION_PREFERENCES[a.type] || 0 }.max
           max_actions = actions.select(){ |a| (ACTION_PREFERENCES[a.type] || 0) == max_pref }
           return max_actions
         end
-        
+
         def process_hora(actions)
           tsumibo = self.honba
           ura = nil
@@ -187,7 +190,7 @@ module Mjai
             raise("no yaku") if !hora.valid?
             deltas = [0, 0, 0, 0]
             deltas[action.actor.id] += hora.points + tsumibo * 300 + @ag_kyotaku * 1000
-            
+
             pao_id = action.actor.pao_for_id
             if hora.hora_type == :tsumo
               if pao_id != nil
@@ -230,7 +233,7 @@ module Mjai
           end
           update_oya(actions.any?(){ |a| a.actor == self.oya }, false)
         end
-        
+
         def process_ryukyoku(reason, actors=[])
           actor = (reason == :kyushukyuhai) ? actors[0] : nil
           tenpais = []
@@ -255,14 +258,14 @@ module Mjai
           })
           update_oya(true, reason)
         end
-        
+
         def process_fanpai()
           tenpais = []
           tehais = []
-          
+
           is_nagashi = false
           nagashi_deltas = [0,0,0,0]
-          
+
           for player in players
             #流し満貫の判定
             if player.sutehais.size == player.ho.size && #鳴かれておらず
@@ -277,7 +280,7 @@ module Mjai
                 nagashi_deltas[self.oya.id] -= 2000
               end
             end
-            
+
             if player.tenpai?
               tenpais.push(true)
               tehais.push(player.tehais)
@@ -288,7 +291,7 @@ module Mjai
           end
           tenpai_ids = (0...4).select(){ |i| tenpais[i] }
           noten_ids = (0...4).select(){ |i| !tenpais[i] }
-          
+
           if is_nagashi
             deltas = nagashi_deltas
           else
@@ -302,7 +305,7 @@ module Mjai
               end
             end
           end
-          
+
           reason = is_nagashi ? :nagashimangan : :fanpai
           do_action({
               :type => :ryukyoku,
@@ -314,7 +317,7 @@ module Mjai
           })
           update_oya(tenpais[self.oya.id], reason)
         end
-        
+
         def update_oya(renchan, ryukyoku_reason)
           if renchan
             @ag_oya = self.oya
@@ -334,7 +337,7 @@ module Mjai
               @last = decide_last(Pai.new("S"), renchan, ryukyoku_reason)
           end
         end
-        
+
         def decide_last(last_bakaze, renchan, ryukyoku_reason)
           if @players.any? { |pl| pl.score < 0 }
             return true
@@ -343,11 +346,11 @@ module Mjai
           if @ag_bakaze == last_bakaze.succ.succ
             return true
           end
-          
+
           if ryukyoku_reason && ![:fanpai, :nagashimangan].include?(ryukyoku_reason)
             return false
           end
-          
+
           if renchan
             if (@ag_bakaze == last_bakaze.succ) || (@ag_bakaze == last_bakaze && @ag_oya == @players[3]) #オーラス
               return @ag_oya.score >= 30000 &&
@@ -361,12 +364,12 @@ module Mjai
 
           return false
         end
-        
+
         def add_dora()
           dora_marker = @wanpais.pop()
           do_action({:type => :dora, :dora_marker => dora_marker})
         end
-        
+
         def game_finished?
           if @last
             return true
@@ -375,22 +378,22 @@ module Mjai
             return false
           end
         end
-        
+
         def get_final_scores()
           # The winner takes remaining kyotaku.
           deltas = [0, 0, 0, 0]
           deltas[self.ranked_players[0].id] = @ag_kyotaku * 1000
           return get_scores(deltas)
         end
-        
+
         def expect_response_from?(player)
           return true
         end
-        
+
         def get_scores(deltas)
           return (0...4).map(){ |i| self.players[i].score + deltas[i] }
         end
-        
+
     end
-    
+
 end
